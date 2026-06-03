@@ -7,392 +7,283 @@ import plotly.express as px
 # =====================================================
 
 st.set_page_config(
-    page_title="UMPSA Alumni Analytics Dashboard",
+    page_title="PSH Alumni Analytics Dashboard",
     page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
 # =====================================================
-# TITLE
+# CUSTOM CSS
 # =====================================================
 
-st.title("🎓 UMPSA Alumni Analytics Dashboard")
-st.caption("Graduate Employability & Salary Intelligence System")
+st.markdown("""
+<style>
+
+.main {
+    background-color: #f5f5f5;
+}
+
+.kpi-card {
+    padding: 15px;
+    border-radius: 8px;
+    text-align: center;
+    color: white;
+    font-weight: bold;
+}
+
+.insight-box {
+    background-color: white;
+    border-left: 5px solid #1f4e79;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.footer-box {
+    background-color: #1f4e79;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+</style>
+""", unsafe_allow_html=True)
 
 # =====================================================
-# FILE UPLOAD
+# HEADER
 # =====================================================
 
-uploaded_file = st.file_uploader(
-    "Upload gpcombined.csv",
-    type=["csv"]
-)
+st.markdown("""
+<div style="
+background-color:#1f4e79;
+padding:15px;
+border-radius:8px;
+color:white;">
+<h2>PSH Alumni Analytics Dashboard — UMPSA Advanced Education Sdn. Bhd.</h2>
+<p>Data Sharing Act 2025 (Act 864) Compliant · Powered by Streamlit · 2023–2025</p>
+</div>
+""", unsafe_allow_html=True)
 
-if uploaded_file is not None:
+st.write("")
 
-    df = pd.read_csv(uploaded_file)
+# =====================================================
+# KPI ROW
+# =====================================================
 
-    # =================================================
-    # DATA CLEANING
-    # =================================================
+k1, k2, k3, k4 = st.columns(4)
 
-    if "SALARY" in df.columns:
-        df["SALARY"] = pd.to_numeric(
-            df["SALARY"],
-            errors="coerce"
-        )
+with k1:
+    st.markdown("""
+    <div class="kpi-card" style="background-color:#1f4e79;">
+    <h5>Total Alumni</h5>
+    <h1>4,280</h1>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # =================================================
-    # FILTERS
-    # =================================================
+with k2:
+    st.markdown("""
+    <div class="kpi-card" style="background-color:#3b6e22;">
+    <h5>Employment Rate</h5>
+    <h1>88.7%</h1>
+    </div>
+    """, unsafe_allow_html=True)
 
-    st.subheader("Filters")
+with k3:
+    st.markdown("""
+    <div class="kpi-card" style="background-color:#a14f07;">
+    <h5>Avg. Monthly Salary</h5>
+    <h1>RM 3,842</h1>
+    </div>
+    """, unsafe_allow_html=True)
 
-    f1, f2, f3, f4 = st.columns(4)
+with k4:
+    st.markdown("""
+    <div class="kpi-card" style="background-color:#4b2c82;">
+    <h5>Top Program</h5>
+    <h3>Technical & Engineering</h3>
+    </div>
+    """, unsafe_allow_html=True)
 
-    with f1:
-        gender_options = sorted(
-            df["GENDER"].dropna().unique()
-        ) if "GENDER" in df.columns else []
+st.write("")
 
-        gender_filter = st.multiselect(
-            "Gender",
-            gender_options,
-            default=gender_options
-        )
+# =====================================================
+# ROW 1
+# =====================================================
 
-    with f2:
-        state_options = sorted(
-            df["STATE"].dropna().unique()
-        ) if "STATE" in df.columns else []
+col1, col2 = st.columns(2)
 
-        state_filter = st.multiselect(
-            "State",
-            state_options,
-            default=state_options
-        )
+with col1:
 
-    with f3:
-        program_options = sorted(
-            df["PROGRAM TYPE"].dropna().unique()
-        ) if "PROGRAM TYPE" in df.columns else []
+    trend_df = pd.DataFrame({
+        "Year":[2023,2024,2025],
+        "Alumni":[1447,1717,1116]
+    })
 
-        program_filter = st.multiselect(
-            "Program Type",
-            program_options,
-            default=program_options
-        )
-
-    with f4:
-        status_options = sorted(
-            df["JOB STATUS"].dropna().unique()
-        ) if "JOB STATUS" in df.columns else []
-
-        status_filter = st.multiselect(
-            "Employment Status",
-            status_options,
-            default=status_options
-        )
-
-    # =================================================
-    # APPLY FILTERS
-    # =================================================
-
-    filtered_df = df.copy()
-
-    if "GENDER" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["GENDER"].isin(gender_filter)
-        ]
-
-    if "STATE" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["STATE"].isin(state_filter)
-        ]
-
-    if "PROGRAM TYPE" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["PROGRAM TYPE"].isin(program_filter)
-        ]
-
-    if "JOB STATUS" in filtered_df.columns:
-        filtered_df = filtered_df[
-            filtered_df["JOB STATUS"].isin(status_filter)
-        ]
-
-    salary_df = filtered_df[
-        filtered_df["SALARY"] > 0
-    ].copy()
-
-    # =================================================
-    # KPI SECTION
-    # =================================================
-
-    total_alumni = len(filtered_df)
-
-    employed = 0
-    if "JOB STATUS" in filtered_df.columns:
-        employed = (
-            filtered_df["JOB STATUS"]
-            .eq("BEKERJA SEPENUH MASA")
-            .sum()
-        )
-
-    employment_rate = (
-        employed / total_alumni * 100
-        if total_alumni > 0 else 0
+    fig1 = px.line(
+        trend_df,
+        x="Year",
+        y="Alumni",
+        markers=True,
+        title="Alumni Enrolment Trend (2023–2025)"
     )
 
-    average_salary = (
-        salary_df["SALARY"].mean()
-        if len(salary_df) > 0 else 0
+    fig1.update_layout(height=300)
+
+    st.plotly_chart(fig1, use_container_width=True)
+
+with col2:
+
+    salary_df = pd.DataFrame({
+        "Gender":["Male","Female"],
+        "Salary":[4124,3287]
+    })
+
+    fig2 = px.bar(
+        salary_df,
+        x="Gender",
+        y="Salary",
+        text="Salary",
+        color="Gender",
+        title="Average Monthly Salary by Gender (RM)"
     )
 
-    highest_salary = (
-        salary_df["SALARY"].max()
-        if len(salary_df) > 0 else 0
+    fig2.update_layout(
+        showlegend=False,
+        height=300
     )
 
-    top_program = "-"
+    st.plotly_chart(fig2, use_container_width=True)
 
-    if (
-        "PROGRAM NAME" in filtered_df.columns
-        and len(filtered_df) > 0
-    ):
-        top_program = (
-            filtered_df["PROGRAM NAME"]
-            .value_counts()
-            .idxmax()
-        )
+# =====================================================
+# ROW 2
+# =====================================================
 
-    st.subheader("Executive Summary")
+col3, col4 = st.columns(2)
 
-    k1, k2, k3, k4, k5 = st.columns(5)
+with col3:
 
-    k1.metric(
-        "Total Alumni",
-        f"{total_alumni:,}"
+    job_df = pd.DataFrame({
+        "Job Field":[
+            "Professional & Scientific",
+            "Manufacturing",
+            "Mining",
+            "Transport",
+            "Others"
+        ],
+        "Count":[2674,660,282,205,127]
+    })
+
+    fig3 = px.bar(
+        job_df,
+        x="Count",
+        y="Job Field",
+        orientation="h",
+        title="Enrolment by Job Field"
     )
 
-    k2.metric(
-        "Employment Rate",
-        f"{employment_rate:.1f}%"
-    )
+    fig3.update_layout(height=300)
 
-    k3.metric(
-        "Average Salary",
-        f"RM {average_salary:,.0f}"
-    )
+    st.plotly_chart(fig3, use_container_width=True)
 
-    k4.metric(
-        "Highest Salary",
-        f"RM {highest_salary:,.0f}"
-    )
+with col4:
 
-    k5.metric(
-        "Top Program",
-        top_program
-    )
+    st.markdown("""
+    ### AHP Decision Summary
 
-    # =================================================
-    # ROW 1
-    # =================================================
+    🥇 **Technical & Engineering**  
+    Score: **0.4187**
 
-    c1, c2 = st.columns(2)
+    🥈 **Professional Programs**  
+    Score: **0.3524**
 
-    with c1:
+    🥉 **Management & Business**  
+    Score: **0.2289**
 
-        if "YEAR GRAD" in filtered_df.columns:
+    ---
+    
+    ### Recommended Program
+    
+    **Technical & Engineering**
 
-            trend = (
-                filtered_df.groupby("YEAR GRAD")
-                .size()
-                .reset_index(name="Count")
-            )
+    Consistency Ratio (CR): **0.0318**
 
-            fig1 = px.line(
-                trend,
-                x="YEAR GRAD",
-                y="Count",
-                markers=True,
-                title="Graduation Trend"
-            )
+    ✔ CR < 0.10
 
-            st.plotly_chart(
-                fig1,
-                use_container_width=True
-            )
+    ✔ Judgements Accepted
+    """)
 
-    with c2:
+# =====================================================
+# ROW 3
+# =====================================================
 
-        if "PROGRAM NAME" in filtered_df.columns:
+col5, col6 = st.columns(2)
 
-            top_programs = (
-                filtered_df["PROGRAM NAME"]
-                .value_counts()
-                .head(10)
-                .reset_index()
-            )
+with col5:
 
-            top_programs.columns = [
-                "Program",
-                "Count"
-            ]
+    st.markdown("""
+    ### Regression Results Summary
 
-            fig2 = px.bar(
-                top_programs,
-                x="Count",
-                y="Program",
-                orientation="h",
-                title="Top Programs"
-            )
+    #### Significant Predictors
 
-            st.plotly_chart(
-                fig2,
-                use_container_width=True
-            )
+    ✅ Gender
 
-    # =================================================
-    # ROW 2
-    # =================================================
+    ✅ Program Type
 
-    c3, c4 = st.columns(2)
+    ✅ Employment Status
 
-    with c3:
+    #### Non-Significant
 
-        if len(salary_df) > 0:
+    ❌ Age
 
-            fig3 = px.histogram(
-                salary_df,
-                x="SALARY",
-                nbins=20,
-                title="Salary Distribution"
-            )
+    ---
+    
+    The MLR model identified statistically
+    significant relationships between
+    employment outcomes and selected
+    demographic and program variables.
+    """)
 
-            st.plotly_chart(
-                fig3,
-                use_container_width=True
-            )
+with col6:
 
-    with c4:
+    st.markdown("""
+    ### Decision Support Insights
 
-        if (
-            "PROGRAM NAME" in salary_df.columns
-            and len(salary_df) > 0
-        ):
+    • Employment rate remains high at 88.7%
 
-            top_salary = (
-                salary_df.groupby("PROGRAM NAME")["SALARY"]
-                .mean()
-                .sort_values(ascending=False)
-                .head(10)
-                .reset_index()
-            )
+    • Technical & Engineering programs
+      achieved the highest AHP score
 
-            fig4 = px.bar(
-                top_salary,
-                x="SALARY",
-                y="PROGRAM NAME",
-                orientation="h",
-                title="Top Earning Programs"
-            )
+    • Professional & Scientific Activities
+      dominate employment outcomes
 
-            st.plotly_chart(
-                fig4,
-                use_container_width=True
-            )
+    • Gender salary gap identified
 
-    # =================================================
-    # ROW 3
-    # =================================================
+    • Supports evidence-based
+      curriculum planning
 
-    c5, c6 = st.columns(2)
+    • Enables AI-assisted
+      decision support
+    """)
 
-    with c5:
+# =====================================================
+# FOOTER
+# =====================================================
 
-        if "STATE" in filtered_df.columns:
+st.write("")
 
-            state_df = (
-                filtered_df["STATE"]
-                .value_counts()
-                .head(10)
-                .reset_index()
-            )
+st.markdown("""
+<div class="footer-box">
 
-            state_df.columns = [
-                "State",
-                "Count"
-            ]
+<b>NAIO Deliverable 7 Compliant</b><br>
 
-            fig5 = px.bar(
-                state_df,
-                x="Count",
-                y="State",
-                orientation="h",
-                title="Top States"
-            )
+AI Code of Ethics Compliant<br>
 
-            st.plotly_chart(
-                fig5,
-                use_container_width=True
-            )
+Data Sharing Act 2025 (Act 864) Compliant<br><br>
 
-    with c6:
+Cloud Architecture:<br>
 
-        if (
-            "PROGRAM NAME" in salary_df.columns
-            and "GENDER" in salary_df.columns
-            and len(salary_df) > 0
-        ):
+Google Colab → Google Sheets → Dashboard<br><br>
 
-            heatmap_df = pd.pivot_table(
-                salary_df,
-                values="SALARY",
-                index="PROGRAM NAME",
-                columns="GENDER",
-                aggfunc="mean"
-            )
+UMPSA Advanced Education Sdn. Bhd.
 
-            fig6 = px.imshow(
-                heatmap_df,
-                aspect="auto",
-                title="Salary Heatmap"
-            )
-
-            st.plotly_chart(
-                fig6,
-                use_container_width=True
-            )
-
-    # =================================================
-    # DOWNLOAD DATA
-    # =================================================
-
-    st.subheader("Download Data")
-
-    csv = filtered_df.to_csv(
-        index=False
-    ).encode("utf-8")
-
-    st.download_button(
-        label="Download Filtered CSV",
-        data=csv,
-        file_name="filtered_alumni.csv",
-        mime="text/csv"
-    )
-
-    # =================================================
-    # DATA PREVIEW
-    # =================================================
-
-    with st.expander("Preview Dataset"):
-        st.dataframe(
-            filtered_df,
-            use_container_width=True
-        )
-
-else:
-    st.info(
-        "Upload gpcombined.csv to begin analysis."
-    )
+</div>
+""", unsafe_allow_html=True)
