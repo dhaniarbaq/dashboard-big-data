@@ -1,143 +1,289 @@
-
+```python
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
+import plotly.graph_objects as go
 
-st.set_page_config(page_title="UMPSA Alumni Analytics Dashboard", layout="wide")
+# --------------------------------------------------
+# PAGE CONFIG
+# --------------------------------------------------
+st.set_page_config(
+    page_title="UMPSA Alumni Analytics Dashboard",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
 
-# Branding
-st.title("🎓 UMPSA Alumni Analytics Dashboard")
-st.caption("Faculty Graduate Employability & Salary Intelligence System")
+# --------------------------------------------------
+# CUSTOM CSS
+# --------------------------------------------------
+st.markdown("""
+<style>
+.main {
+    padding-top: 0.5rem;
+}
 
-logo = st.sidebar.file_uploader("Upload UMPSA/Faculty Logo (Optional)", type=["png","jpg","jpeg"])
-if logo:
-    st.sidebar.image(logo, use_container_width=True)
+.metric-card {
+    background-color: #f8f9fa;
+    padding: 10px;
+    border-radius: 10px;
+}
 
-uploaded_file = st.file_uploader("Upload Alumni Dataset (CSV)", type=["csv"])
+h1 {
+    color: #003366;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --------------------------------------------------
+# HEADER
+# --------------------------------------------------
+col_logo, col_title = st.columns([1,5])
+
+with col_logo:
+    st.image(
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/4/48/Universiti_Malaysia_Pahang_logo.svg/512px-Universiti_Malaysia_Pahang_logo.svg.png",
+        width=100
+    )
+
+with col_title:
+    st.title("UMPSA Alumni Analytics Dashboard")
+    st.caption("Graduate Employability & Salary Intelligence System")
+
+st.divider()
+
+# --------------------------------------------------
+# DATA UPLOAD
+# --------------------------------------------------
+uploaded_file = st.file_uploader(
+    "Upload gpcombined.csv",
+    type=["csv"]
+)
 
 if uploaded_file:
 
     df = pd.read_csv(uploaded_file)
-    df["SALARY"] = pd.to_numeric(df["SALARY"], errors="coerce")
 
-    st.sidebar.header("Dashboard Filters")
+    df["SALARY"] = pd.to_numeric(
+        df["SALARY"],
+        errors="coerce"
+    )
 
-    # Dynamic filters
-    if "GENDER" in df.columns:
-        gender = st.sidebar.multiselect(
+    # --------------------------------------------------
+    # TOP FILTERS
+    # --------------------------------------------------
+    st.subheader("Filters")
+
+    f1, f2, f3, f4 = st.columns(4)
+
+    with f1:
+        gender = st.multiselect(
             "Gender",
-            df["GENDER"].dropna().unique(),
-            default=df["GENDER"].dropna().unique()
+            sorted(df["GENDER"].dropna().unique()),
+            default=list(df["GENDER"].dropna().unique())
         )
-        df = df[df["GENDER"].isin(gender)]
 
-    if "STATE" in df.columns:
-        state = st.sidebar.multiselect(
+    with f2:
+        state = st.multiselect(
             "State",
-            df["STATE"].dropna().unique(),
-            default=df["STATE"].dropna().unique()
+            sorted(df["STATE"].dropna().unique()),
+            default=list(df["STATE"].dropna().unique())
         )
-        df = df[df["STATE"].isin(state)]
 
-    if "PROGRAM TYPE" in df.columns:
-        ptype = st.sidebar.multiselect(
+    with f3:
+        program = st.multiselect(
             "Program Type",
-            df["PROGRAM TYPE"].dropna().unique(),
-            default=df["PROGRAM TYPE"].dropna().unique()
+            sorted(df["PROGRAM TYPE"].dropna().unique()),
+            default=list(df["PROGRAM TYPE"].dropna().unique())
         )
-        df = df[df["PROGRAM TYPE"].isin(ptype)]
 
-    if "JOB STATUS" in df.columns:
-        status = st.sidebar.multiselect(
+    with f4:
+        status = st.multiselect(
             "Employment Status",
-            df["JOB STATUS"].dropna().unique(),
-            default=df["JOB STATUS"].dropna().unique()
+            sorted(df["JOB STATUS"].dropna().unique()),
+            default=list(df["JOB STATUS"].dropna().unique())
         )
-        df = df[df["JOB STATUS"].isin(status)]
 
-    total = len(df)
-    employed = (df["JOB STATUS"] == "BEKERJA SEPENUH MASA").sum() if "JOB STATUS" in df.columns else 0
-    emp_rate = employed / total * 100 if total else 0
+    df = df[
+        (df["GENDER"].isin(gender)) &
+        (df["STATE"].isin(state)) &
+        (df["PROGRAM TYPE"].isin(program)) &
+        (df["JOB STATUS"].isin(status))
+    ]
 
     salary_df = df[df["SALARY"] > 0]
-    avg_salary = salary_df["SALARY"].mean() if len(salary_df) else 0
 
-    top_program = "-"
-    if "PROGRAM NAME" in df.columns and len(df):
-        top_program = df["PROGRAM NAME"].value_counts().idxmax()
+    # --------------------------------------------------
+    # KPI ROW
+    # --------------------------------------------------
+    total = len(df)
 
-    # Executive Summary
-    st.header("📊 Executive Summary")
+    employed = (
+        df["JOB STATUS"]
+        .eq("BEKERJA SEPENUH MASA")
+        .sum()
+    )
 
-    c1,c2,c3,c4 = st.columns(4)
-    c1.metric("Total Alumni", f"{total:,}")
-    c2.metric("Employment Rate", f"{emp_rate:.1f}%")
-    c3.metric("Average Salary", f"RM {avg_salary:,.0f}")
-    c4.metric("Top Program", top_program)
+    emp_rate = (
+        employed / total * 100
+        if total > 0 else 0
+    )
 
-    st.markdown("---")
+    avg_salary = (
+        salary_df["SALARY"].mean()
+        if len(salary_df) > 0 else 0
+    )
 
-    # Employment Analytics
-    st.header("💼 Employment Analytics")
+    highest_salary = (
+        salary_df["SALARY"].max()
+        if len(salary_df) > 0 else 0
+    )
 
-    col1,col2 = st.columns(2)
+    top_program = (
+        df["PROGRAM NAME"]
+        .value_counts()
+        .idxmax()
+        if total > 0 else "-"
+    )
 
-    with col1:
-        if "PROGRAM NAME" in df.columns and "JOB STATUS" in df.columns:
-            emp_prog = pd.crosstab(df["PROGRAM NAME"], df["JOB STATUS"])
-            fig = px.bar(emp_prog, title="Employment by Program")
-            st.plotly_chart(fig, use_container_width=True)
+    k1, k2, k3, k4, k5 = st.columns(5)
 
-    with col2:
-        if "STATE" in df.columns and "JOB STATUS" in df.columns:
-            emp_state = pd.crosstab(df["STATE"], df["JOB STATUS"])
-            fig = px.bar(emp_state, title="Employment by State")
-            st.plotly_chart(fig, use_container_width=True)
+    k1.metric("Total Alumni", f"{total:,}")
+    k2.metric("Employment Rate", f"{emp_rate:.1f}%")
+    k3.metric("Average Salary", f"RM {avg_salary:,.0f}")
+    k4.metric("Highest Salary", f"RM {highest_salary:,.0f}")
+    k5.metric("Top Program", top_program)
 
-    if "YEAR GRAD" in df.columns:
-        emp_year = pd.crosstab(df["YEAR GRAD"], df["JOB STATUS"])
-        fig = px.bar(emp_year, title="Employment by Graduation Year")
-        st.plotly_chart(fig, use_container_width=True)
+    st.divider()
 
-    st.markdown("---")
+    # --------------------------------------------------
+    # CHARTS ROW 1
+    # --------------------------------------------------
+    c1, c2 = st.columns(2)
 
-    # Salary Analytics
-    st.header("💰 Salary Analytics")
-
-    col3,col4 = st.columns(2)
-
-    with col3:
-        salary_df["Salary Band"] = pd.cut(
-            salary_df["SALARY"],
-            bins=[0,2000,3000,4000,5000,100000],
-            labels=["<2000","2000-3000","3000-4000","4000-5000","5000+"]
+    with c1:
+        trend = (
+            df.groupby("YEAR GRAD")
+            .size()
+            .reset_index(name="Count")
         )
-        band = salary_df["Salary Band"].value_counts().reset_index()
-        band.columns = ["Salary Band","Count"]
-        fig = px.bar(band, x="Salary Band", y="Count",
-                     title="Salary Band Distribution")
-        st.plotly_chart(fig, use_container_width=True)
 
-    with col4:
-        if "PROGRAM NAME" in salary_df.columns:
-            top_salary = (
-                salary_df.groupby("PROGRAM NAME")["SALARY"]
-                .mean()
-                .sort_values(ascending=False)
-                .head(10)
-                .reset_index()
-            )
-            fig = px.bar(
-                top_salary,
-                x="SALARY",
-                y="PROGRAM NAME",
-                orientation="h",
-                title="Top Earning Programs"
-            )
-            st.plotly_chart(fig, use_container_width=True)
+        fig1 = px.line(
+            trend,
+            x="YEAR GRAD",
+            y="Count",
+            markers=True,
+            title="Employment Trend by Graduation Year"
+        )
 
-    if {"PROGRAM NAME","GENDER","SALARY"}.issubset(df.columns):
+        st.plotly_chart(
+            fig1,
+            use_container_width=True
+        )
+
+    with c2:
+
+        prog = (
+            df["PROGRAM NAME"]
+            .value_counts()
+            .head(10)
+            .reset_index()
+        )
+
+        prog.columns = [
+            "Program",
+            "Count"
+        ]
+
+        fig2 = px.bar(
+            prog,
+            x="Count",
+            y="Program",
+            orientation="h",
+            title="Top Programs"
+        )
+
+        st.plotly_chart(
+            fig2,
+            use_container_width=True
+        )
+
+    # --------------------------------------------------
+    # CHARTS ROW 2
+    # --------------------------------------------------
+    c3, c4 = st.columns(2)
+
+    with c3:
+
+        fig3 = px.histogram(
+            salary_df,
+            x="SALARY",
+            nbins=20,
+            title="Salary Distribution"
+        )
+
+        st.plotly_chart(
+            fig3,
+            use_container_width=True
+        )
+
+    with c4:
+
+        top_salary = (
+            salary_df.groupby("PROGRAM NAME")["SALARY"]
+            .mean()
+            .sort_values(ascending=False)
+            .head(10)
+            .reset_index()
+        )
+
+        fig4 = px.bar(
+            top_salary,
+            x="SALARY",
+            y="PROGRAM NAME",
+            orientation="h",
+            title="Top Earning Programs"
+        )
+
+        st.plotly_chart(
+            fig4,
+            use_container_width=True
+        )
+
+    # --------------------------------------------------
+    # CHARTS ROW 3
+    # --------------------------------------------------
+    c5, c6 = st.columns(2)
+
+    with c5:
+
+        state_df = (
+            df["STATE"]
+            .value_counts()
+            .head(10)
+            .reset_index()
+        )
+
+        state_df.columns = [
+            "State",
+            "Count"
+        ]
+
+        fig5 = px.bar(
+            state_df,
+            x="Count",
+            y="State",
+            orientation="h",
+            title="Top States by Alumni"
+        )
+
+        st.plotly_chart(
+            fig5,
+            use_container_width=True
+        )
+
+    with c6:
+
         heat = pd.pivot_table(
             salary_df,
             values="SALARY",
@@ -145,60 +291,34 @@ if uploaded_file:
             columns="GENDER",
             aggfunc="mean"
         )
-        fig = px.imshow(
+
+        fig6 = px.imshow(
             heat,
             aspect="auto",
-            title="Salary Heatmap by Program and Gender"
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("---")
-
-    # Interactive Drill-down
-    st.header("🔍 Interactive Drill-Down")
-
-    if "PROGRAM NAME" in df.columns:
-        selected_program = st.selectbox(
-            "Select Program",
-            sorted(df["PROGRAM NAME"].dropna().unique())
+            title="Salary Heatmap"
         )
 
-        program_df = df[df["PROGRAM NAME"] == selected_program]
+        st.plotly_chart(
+            fig6,
+            use_container_width=True
+        )
 
-        col5,col6 = st.columns(2)
+    # --------------------------------------------------
+    # DOWNLOAD BUTTON
+    # --------------------------------------------------
+    st.divider()
 
-        with col5:
-            fig = px.histogram(
-                program_df,
-                x="SALARY",
-                title=f"Salary Distribution - {selected_program}"
-            )
-            st.plotly_chart(fig, use_container_width=True)
-
-        with col6:
-            if "STATE" in program_df.columns:
-                fig = px.pie(
-                    program_df,
-                    names="STATE",
-                    title=f"State Distribution - {selected_program}"
-                )
-                st.plotly_chart(fig, use_container_width=True)
-
-    st.markdown("---")
-
-    # Download Section
-    st.header("⬇️ Export Data")
-
-    csv = df.to_csv(index=False).encode("utf-8")
+    csv = df.to_csv(index=False)
 
     st.download_button(
-        "Download Filtered CSV",
+        "Download Filtered Dataset",
         csv,
-        "filtered_alumni_data.csv",
+        "filtered_alumni.csv",
         "text/csv"
     )
 
-    st.dataframe(df, use_container_width=True)
-
 else:
-    st.info("Upload a CSV dataset to begin analysis.")
+    st.info(
+        "Upload gpcombined.csv to display dashboard."
+    )
+```
