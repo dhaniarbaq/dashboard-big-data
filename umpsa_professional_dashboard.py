@@ -188,13 +188,13 @@ with col4:
     st.markdown("""
     ### AHP Decision Summary
 
-    🥇 **Technical & Engineering**  
+    1. **Technical & Engineering**  
     Score: **0.4187**
 
-    🥈 **Professional Programs**  
+    2. **Professional Programs**  
     Score: **0.3524**
 
-    🥉 **Management & Business**  
+    3. **Management & Business**  
     Score: **0.2289**
 
     ---
